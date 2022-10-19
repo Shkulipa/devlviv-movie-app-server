@@ -2,6 +2,7 @@ import "./config/dotenv.config";
 import express, { Application } from "express";
 import router from "./routers";
 import logger from "./utils/logger";
+import cookieParser from "cookie-parser";
 import corsConfig from './config/cors.config';
 import { version } from "../package.json";
 import { API_VERSION } from "./utils/const";
@@ -14,6 +15,7 @@ const port = process.env.PORT;
 const server: Application = express();
 server.use(corsConfig);
 server.use(express.json());
+server.use(cookieParser());
 server.use(API_VERSION, router);
 server.use(errorHandler);
 
@@ -23,4 +25,5 @@ server.listen(port, async (): Promise<void> => {
 	);
 
   await DBService.connectDB();
+  await DBService.syncDB();
 });

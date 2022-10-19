@@ -4,9 +4,15 @@ migrations:
 - https://www.youtube.com/watch?v=XvCcyqB96Yg&ab_channel=RuiWang (how create associations)
 
 for example:
-- yarn sequalize db:drop
-- yarn sequalize db:create
-- yarn sequalize model:generate --name user --attributes email:string,password:string
+- yarn sequelize db:drop
+- yarn sequelize db:create
+- yarn sequelize model:generate --name user --attributes email:string,password:string
 
 associations(relationships) you need to custom make it from this lesson:
 - https://www.youtube.com/watch?v=XvCcyqB96Yg&ab_channel=RuiWang
+
+use sequelize-cli and typescript is bad, need to use or sequelize-cli or typescript,
+or try typeorm or another orm with typescript
+because i can't call models which was ganerated after migration
+in this video, all is ok(js + sequalize-cli):
+- https://www.youtube.com/watch?v=3qlnR9hK-lQ&ab_channel=Classsed

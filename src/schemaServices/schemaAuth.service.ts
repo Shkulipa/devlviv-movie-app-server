@@ -1,6 +1,6 @@
 import { string } from "zod";
 
-class SchemaService {
+class SchemaAuthService {
 	private passMin = 6;
 
 	password(nameField = "Password") {
@@ -20,4 +20,4 @@ class SchemaService {
 	}
 }
 
-export default new SchemaService();
+export default new SchemaAuthService();

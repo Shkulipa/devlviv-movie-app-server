@@ -1,10 +1,10 @@
 import { object } from "zod";
-import SchemaService from "./../services/schema.service";
+import SchemaAuthService from "./../schemaServices/schemaAuth.service";
 
 const signin = object({
 	body: object({
-		email: SchemaService.email(),
-		password: SchemaService.password()
+		email: SchemaAuthService.email(),
+		password: SchemaAuthService.password()
 	})
 });
 
