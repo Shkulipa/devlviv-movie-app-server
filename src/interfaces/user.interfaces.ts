@@ -1,9 +1,9 @@
-import { JwtPayload } from "jsonwebtoken";
-import { Request } from "express";
+import { Request } from 'express';
+import { JwtPayload } from 'jsonwebtoken';
 
 export interface IUser {
-  email: string,
-  password: string,
+	email: string;
+	password: string;
 }
 export interface IUserRequest extends Request {
 	user: JwtPayload;
@@ -12,13 +12,12 @@ export interface IUserRequest extends Request {
 export interface IUserInput extends IUser {}
 
 export interface IUserDecode {
-  id: number;
-  email: string,
+	id: number;
+	email: string;
 }
 
 export interface IUserRegistered extends IUser {
-  id: number
-  updatedAt: Date,
-  createdAt: Date,
+	id: number;
+	updatedAt: Date;
+	createdAt: Date;
 }
-

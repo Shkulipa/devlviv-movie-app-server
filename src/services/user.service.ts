@@ -1,9 +1,9 @@
-import PasswordService from './passwrod.service';
-import UserModel from './../models/user.model';
-import logger from '../utils/logger';
-import Jwt from './jwt.service';
 import { IUserInput } from '../interfaces/user.interfaces';
 import { ApiError } from '../utils/error';
+import logger from '../utils/logger';
+import UserModel from './../models/user.model';
+import Jwt from './jwt.service';
+import PasswordService from './passwrod.service';
 
 class UserService {
 	async signup(input: IUserInput) {
@@ -27,14 +27,11 @@ class UserService {
 				jwtUserPayload
 			);
 
-      /**
-       * @info
-       * update refresh token for user
-       */
-			await UserModel.update(
-				{ token: refreshToken },
-				{ where: { id } }
-			);
+			/**
+			 * @info
+			 * update refresh token for user
+			 */
+			await UserModel.update({ token: refreshToken }, { where: { id } });
 
 			const userData = {
 				...jwtUserPayload,
@@ -51,41 +48,40 @@ class UserService {
 
 	async signin(input: IUserInput) {
 		const { password, email } = input;
-    const encryptPassword = await PasswordService.encrypt(password);
 
 		try {
 			const user = await UserModel.findOne({ where: { email } });
-      if (!user) throw ApiError.badRequest("User with this email was't found");
+			if (!user) throw ApiError.badRequest("User with this email was't found");
 
-      const userPassword = user.getDataValue('password');
-      const isCorrectPassword = await PasswordService.compare(
-        password,
-        userPassword
-      );
-      if (!isCorrectPassword) throw ApiError.badRequest("Password isn't correct");
-
-      const id = user.getDataValue('id');
-      const jwtUserPayload = {
-        id, 
-        email
-      }
-
-      const { refreshToken, accessToken } = await Jwt.createTokens(jwtUserPayload);
-
-      /**
-       * @info
-       * update refresh token for user
-       */
-			await UserModel.update(
-				{ token: refreshToken },
-				{ where: { id } }
+			const userPassword = user.getDataValue('password');
+			const isCorrectPassword = await PasswordService.compare(
+				password,
+				userPassword
 			);
-  
-      const userData = {
-        ...jwtUserPayload,
-        refreshToken,
-        accessToken
-      }
+			if (!isCorrectPassword)
+				throw ApiError.badRequest("Password isn't correct");
+
+			const id = user.getDataValue('id');
+			const jwtUserPayload = {
+				id,
+				email
+			};
+
+			const { refreshToken, accessToken } = await Jwt.createTokens(
+				jwtUserPayload
+			);
+
+			/**
+			 * @info
+			 * update refresh token for user
+			 */
+			await UserModel.update({ token: refreshToken }, { where: { id } });
+
+			const userData = {
+				...jwtUserPayload,
+				refreshToken,
+				accessToken
+			};
 
 			return userData;
 		} catch (err: any) {
@@ -96,10 +92,7 @@ class UserService {
 
 	async logout(token: string) {
 		try {
-			return await UserModel.update(
-				{ token: null },
-				{ where: { token } }
-			);
+			return await UserModel.update({ token: null }, { where: { token } });
 		} catch (err: any) {
 			logger.error(err);
 			throw new Error(err.message);

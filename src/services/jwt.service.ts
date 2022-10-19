@@ -1,6 +1,7 @@
-import jwt from "jsonwebtoken";
-import { IJwtTokens, IJtwData } from "../interfaces/jwt.interfaces";
-import logger from "../utils/logger";
+import jwt from 'jsonwebtoken';
+
+import { IJtwData, IJwtTokens } from '../interfaces/jwt.interfaces';
+import logger from '../utils/logger';
 
 class Jwt {
 	verifyJwtToken(token: string, secretKey: string) {
@@ -17,11 +18,7 @@ class Jwt {
 		}
 	}
 
-	createToken(
-		jwtData: IJtwData,
-		secret: string,
-		expiresIn: string
-	): string {
+	createToken(jwtData: IJtwData, secret: string, expiresIn: string): string {
 		return jwt.sign(jwtData, secret, {
 			expiresIn
 		});
@@ -30,20 +27,20 @@ class Jwt {
 	async createTokens(jwtData: IJtwData): Promise<IJwtTokens> {
 		if (!process.env.SECRET_ACCESS_TOKEN)
 			throw new Error(
-				"You need to create SECRET_ACCESS_TOKEN variable in .env file"
+				'You need to create SECRET_ACCESS_TOKEN variable in .env file'
 			);
 		if (!process.env.EXPIRES_ACCESS)
 			throw new Error(
-				"You need to create EXPIRES_ACCESS variable in .env file"
+				'You need to create EXPIRES_ACCESS variable in .env file'
 			);
 
 		if (!process.env.SECRET_REFRESH_TOKEN)
 			throw new Error(
-				"You need to create SECRET_REFRESH_TOKEN variable in .env file"
+				'You need to create SECRET_REFRESH_TOKEN variable in .env file'
 			);
 		if (!process.env.EXPIRES_REFRESH)
 			throw new Error(
-				"You need to create EXPIRES_REFRESH variable in .env file"
+				'You need to create EXPIRES_REFRESH variable in .env file'
 			);
 
 		const accessToken = this.createToken(

@@ -1,5 +1,6 @@
-import { object } from "zod";
-import SchemaMovieService from "../schemaServices/schemaMovie.service";
+import { object } from 'zod';
+
+import SchemaMovieService from '../schemaServices/schemaMovie.service';
 
 const search = object({
 	body: object({

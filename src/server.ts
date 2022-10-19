@@ -1,13 +1,15 @@
-import "./config/dotenv.config";
-import express, { Application } from "express";
-import router from "./routers";
-import logger from "./utils/logger";
-import cookieParser from "cookie-parser";
+import './config/dotenv.config';
+
+import cookieParser from 'cookie-parser';
+import express, { Application } from 'express';
+
+import { version } from '../package.json';
 import corsConfig from './config/cors.config';
-import { version } from "../package.json";
-import { API_VERSION } from "./utils/const";
-import { errorHandler } from "./middlewares/errorHandler.middleware";
+import { errorHandler } from './middlewares/errorHandler.middleware';
+import router from './routers';
 import DBService from './services/db.service';
+import { API_VERSION } from './utils/const';
+import logger from './utils/logger';
 
 const host = process.env.HOST;
 const port = process.env.PORT;
@@ -24,6 +26,6 @@ server.listen(port, async (): Promise<void> => {
 		`🚀 Server(v${version}) started on the: http://${host}:${port} (mode: ${process.env.NODE_ENV})`
 	);
 
-  await DBService.connectDB();
-  await DBService.syncDB();
+	await DBService.connectDB();
+	await DBService.syncDB();
 });

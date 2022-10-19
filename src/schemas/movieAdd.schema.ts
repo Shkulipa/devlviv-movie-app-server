@@ -1,5 +1,6 @@
-import { object } from "zod";
-import SchemaMovieService from "../schemaServices/schemaMovie.service";
+import { object } from 'zod';
+
+import SchemaMovieService from '../schemaServices/schemaMovie.service';
 
 const movieAdd = object({
 	body: object({
@@ -7,7 +8,7 @@ const movieAdd = object({
 		year: SchemaMovieService.movieYear(),
 		runtime: SchemaMovieService.movieRuntime(),
 		genre: SchemaMovieService.movieGenre(),
-		director: SchemaMovieService.movieDirector(),
+		director: SchemaMovieService.movieDirector()
 	})
 });
 

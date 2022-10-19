@@ -7,6 +7,6 @@ export interface IMovieInput {
 }
 
 type NotRequire<Type> = {
-  [Property in keyof Type]?: Type[Property];
+	[Property in keyof Type]?: Type[Property];
 };
 export type IMovieInputUpdate = NotRequire<IMovieInput>;

@@ -1,4 +1,4 @@
-import bcrypt from "bcrypt";
+import bcrypt from 'bcrypt';
 
 class PasswordService {
 	async encrypt(password: string): Promise<string> {
@@ -6,7 +6,7 @@ class PasswordService {
 			return await bcrypt.hash(password, Number(process.env.SALT_ROUNDS));
 		} else {
 			throw new Error(
-				"Creat in the .env file, variable SALT_ROUNDS = 10, need for bcrypt password"
+				'Creat in the .env file, variable SALT_ROUNDS = 10, need for bcrypt password'
 			);
 		}
 	}
