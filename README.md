@@ -16,3 +16,6 @@ or try typeorm or another orm with typescript
 because i can't call models which was ganerated after migration
 in this video, all is ok(js + sequalize-cli):
 - https://www.youtube.com/watch?v=3qlnR9hK-lQ&ab_channel=Classsed
+
+for typescript better use: sequelize-cli-typescript
+but anyway i cloudn't import model after generate them
