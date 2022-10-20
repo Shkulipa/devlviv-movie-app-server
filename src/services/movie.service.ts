@@ -1,9 +1,14 @@
 import { Op } from 'sequelize';
 
+import { IMovieOMD } from '../interfaces/film.interfaces';
+import { IImdbID } from '../interfaces/IImdbID.interfaces';
 import { IUserDecode } from '../interfaces/user.interfaces';
 import MovieFavoritesModel from '../models/movieFavorites.model';
+import { $omdApi } from '../utils/axios';
 import logger from '../utils/logger';
+import { uuidGenerater } from '../utils/uuidGenerater';
 import {
+	IMovie,
 	IMovieInput,
 	IMovieInputUpdate
 } from './../interfaces/movie.interfaces';
@@ -11,17 +16,40 @@ import MovieModel from './../models/movie.model';
 import { ApiError } from './../utils/error';
 
 class MovieService {
-	async getMovies(search = '', page: number, limit: number) {
+	async getMovies(search = '') {
 		try {
-			const offset = page * limit - limit;
-			const opLike = { [Op.like]: `%${search}%` };
-			return await MovieModel.findAndCountAll({
-				where: {
-					[Op.or]: [{ title: opLike }, { genre: opLike }, { director: opLike }]
-				},
-				limit,
-				offset
+			const { data } = await $omdApi.get('/', {
+				params: {
+					s: search
+				}
 			});
+			const { Search } = data;
+			const getImdbIDs: IImdbID[] = Search.map((film: IMovieOMD) => ({
+				imdbID: film.imdbID,
+				isDeleted: false
+			}));
+			const onlyImdbIDFromIMD: string[] = Search.map(
+				(film: IMovieOMD) => film.imdbID
+			);
+
+			const dbMovies = (await MovieModel.findAll({
+				where: {
+					[Op.or]: [...getImdbIDs]
+				}
+			})) as unknown as IMovie[];
+			const onlyImdbIDFromDB: string[] = dbMovies.map(film => film.imdbID);
+
+			const movies: any = [];
+			onlyImdbIDFromDB.forEach((ImdbID, idx) => {
+				if (onlyImdbIDFromIMD.includes(ImdbID)) {
+					movies.push(dbMovies[idx]);
+				}
+			});
+			onlyImdbIDFromIMD.forEach((ImdbID, idx) => {
+				if (!onlyImdbIDFromDB.includes(ImdbID)) movies.push(Search[idx]);
+			});
+
+			return movies;
 		} catch (err: any) {
 			logger.error(err);
 			throw new Error(err.message);
@@ -29,109 +57,6 @@ class MovieService {
 	}
 
 	async getFavoriteMovie(page: number, limit: number, user: IUserDecode) {
-		try {
-			const offset = page * limit - limit;
-
-			return await MovieModel.findAndCountAll({
-				where: {
-					userId: user.id
-				},
-				limit,
-				offset
-			});
-		} catch (err: any) {
-			logger.error(err);
-			throw new Error(err.message);
-		}
-	}
-
-	async getMovieById(id: string) {
-		try {
-			const movie = await MovieModel.findOne({ where: { id } });
-			if (!movie) throw ApiError.badRequest("Movie wasn't found");
-			return movie;
-		} catch (err: any) {
-			logger.error(err);
-			throw new Error(err.message);
-		}
-	}
-
-	async createMovie(input: IMovieInput, user: IUserDecode) {
-		try {
-			return await MovieModel.create({
-				...input,
-				userId: user.id
-			});
-		} catch (err: any) {
-			logger.error(err);
-			throw new Error(err.message);
-		}
-	}
-
-	async updateMovie(
-		id: string,
-		newValues: IMovieInputUpdate,
-		user: IUserDecode
-	) {
-		try {
-			await this.isExsistMovie(id);
-			await this.isOwnerMovie(id, user.id);
-
-			return await MovieModel.update(
-				{
-					...newValues
-				},
-				{ where: { id } }
-			);
-		} catch (err: any) {
-			logger.error(err);
-			throw new Error(err.message);
-		}
-	}
-
-	async deleteMovie(id: string, user: IUserDecode) {
-		try {
-			const movie = await this.isExsistMovie(id);
-			const ownerId = movie.getDataValue('userId');
-
-			await this.isOwnerMovie(ownerId, user.id);
-
-			await MovieModel.destroy({ where: { id } });
-		} catch (err: any) {
-			logger.error(err);
-			throw new Error(err.message);
-		}
-	}
-
-	async favoriteMovie(id: string, user: IUserDecode) {
-		try {
-			await this.isExsistMovie(id);
-
-			const isFavorite = await MovieFavoritesModel.findOne({
-				where: {
-					userId: +user.id,
-					movieId: +id
-				}
-			});
-
-			if (isFavorite)
-				await MovieFavoritesModel.destroy({
-					where: {
-						[Op.and]: [{ userId: +user.id }, { movieId: +id }]
-					}
-				});
-			else
-				await MovieFavoritesModel.create({
-					userId: +user.id,
-					movieId: +id
-				});
-		} catch (err: any) {
-			logger.error(err);
-			throw new Error(err.message);
-		}
-	}
-
-	async getАavoriteMovie(page: number, limit: number, user: IUserDecode) {
 		try {
 			const offset = page * limit - limit;
 			return await MovieFavoritesModel.findAndCountAll({
@@ -147,23 +72,193 @@ class MovieService {
 		}
 	}
 
-	async isExsistMovie(movieId: string) {
-		/**
-		 * @info
-		 * is exsist movie by id in database ?
-		 */
-		const movie = await MovieModel.findOne({ where: { id: movieId } });
-		if (!movie) throw ApiError.badRequest("Movie wasn't found");
-		return movie;
+	async getMovieById(imdbID: string) {
+		try {
+			/**
+			 * @info
+			 * check is deleted
+			 */
+			const isDeleted = await MovieModel.findOne({
+				where: { imdbID, isDeleted: true }
+			});
+			if (isDeleted) throw ApiError.badRequest("Movie wasn't found");
+
+			/**
+			 * @info
+			 * check in the own DB
+			 */
+			const movie = await MovieModel.findOne({
+				where: { imdbID, isDeleted: false }
+			});
+			if (movie) return movie;
+
+			/**
+			 * @info
+			 * check in the OMB
+			 */
+			const { data } = await $omdApi.get('/', {
+				params: {
+					i: imdbID
+				}
+			});
+			if (data) return data;
+
+			/**
+			 * @info
+			 * if it wasn't found
+			 */
+			if (!movie && !data) throw ApiError.badRequest("Movie wasn't found");
+		} catch (err: any) {
+			logger.error(err);
+			throw new Error(err.message);
+		}
 	}
 
-	async isOwnerMovie(movieIdOwner: string, userId: number) {
-		/**
-		 * @info
-		 * is user a owner by this movie ?
-		 */
-		const isOwner = String(movieIdOwner) === String(userId);
-		if (!isOwner) throw ApiError.badRequest("You aren't owner this movie");
+	async createMovie(input: IMovieInput) {
+		try {
+			const imdbID = uuidGenerater();
+
+			const movieIsDeleted = await MovieModel.findOne({
+				where: { imdbID, isDeleted: true }
+			});
+			if (movieIsDeleted) {
+				await MovieModel.update(
+					{
+						...input,
+						imdbID,
+						isDeleted: false
+					},
+					{ where: { imdbID } }
+				);
+				return;
+			}
+
+			return await MovieModel.create({
+				...input,
+				imdbID
+			});
+		} catch (err: any) {
+			logger.error(err);
+			throw new Error(err.message);
+		}
+	}
+
+	async updateMovie(imdbID: string, newValues: IMovieInputUpdate) {
+		try {
+			const movie = await MovieModel.findOne({
+				where: { imdbID, isDeleted: false }
+			});
+			if (movie) {
+				await MovieModel.update(
+					{
+						...newValues
+					},
+					{ where: { imdbID } }
+				);
+				return;
+			}
+
+			if (!movie) {
+				const { data } = await $omdApi.get('/', {
+					params: {
+						i: imdbID
+					}
+				});
+				if (!data) throw ApiError.badRequest("Movie wasn't found");
+
+				const { Title, Year, Runtime, Genre, Director } = data as IMovieOMD;
+				const unitedValues = {
+					title: Title,
+					year: Year,
+					runtime: Runtime,
+					genre: Genre,
+					director: Director,
+					...newValues
+				};
+
+				await MovieModel.create({
+					...unitedValues,
+					imdbID
+				});
+			}
+		} catch (err: any) {
+			logger.error(err);
+			throw new Error(err.message);
+		}
+	}
+
+	async deleteMovie(imdbID: string) {
+		try {
+			const { data } = await $omdApi.get('/', {
+				params: {
+					i: imdbID
+				}
+			});
+
+			const movieIsDeleted = await MovieModel.findOne({
+				where: { imdbID, isDeleted: true }
+			});
+			if (movieIsDeleted) return;
+
+			const isMovie = await MovieModel.findOne({
+				where: { imdbID, isDeleted: false }
+			});
+			if (isMovie) {
+				await MovieModel.update(
+					{
+						isDeleted: true
+					},
+					{ where: { imdbID } }
+				);
+				return;
+			}
+
+			const { Title, Year, Runtime, Genre, Director } = data as IMovieOMD;
+			const newValues = {
+				title: Title,
+				year: Year,
+				runtime: Runtime,
+				genre: Genre,
+				director: Director
+			};
+
+			await MovieModel.create({
+				...newValues,
+				imdbID,
+				isDeleted: true
+			});
+		} catch (err: any) {
+			logger.error(err);
+			throw new Error(err.message);
+		}
+	}
+
+	async favoriteMovie(imdbID: string, user: IUserDecode) {
+		try {
+			await this.getMovieById(imdbID);
+
+			const isFavorite = await MovieFavoritesModel.findOne({
+				where: {
+					userId: +user.id,
+					imdbID: imdbID
+				}
+			});
+
+			if (isFavorite)
+				await MovieFavoritesModel.destroy({
+					where: {
+						[Op.and]: [{ userId: +user.id }, { imdbID: imdbID }]
+					}
+				});
+			else
+				await MovieFavoritesModel.create({
+					userId: +user.id,
+					imdbID: imdbID
+				});
+		} catch (err: any) {
+			logger.error(err);
+			throw new Error(err.message);
+		}
 	}
 }
 

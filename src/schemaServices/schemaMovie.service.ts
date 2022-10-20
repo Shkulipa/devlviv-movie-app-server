@@ -8,18 +8,23 @@ class SchemaMovieService {
 	private movieRuntimeMin = 1;
 	private movieGenreMax = 50;
 	private movieDirectorMax = 50;
+
 	private searchMax = 50;
+	private searchMin = 3;
 
 	search() {
 		return string({
 			required_error: 'Search field is required',
 			invalid_type_error: 'Search must be a string'
 		})
+			.min(
+				this.searchMin,
+				`Search field too small - minimun can be ${this.searchMin} chars`
+			)
 			.max(
 				this.searchMax,
 				`Search field too long - maximum can be ${this.searchMax} chars`
-			)
-			.optional();
+			);
 	}
 
 	movieTitle(options?: ISchemaInput) {

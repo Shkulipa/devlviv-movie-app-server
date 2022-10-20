@@ -6,6 +6,17 @@ export interface IMovieInput {
 	director: string;
 }
 
+export interface IMovie {
+	id: number;
+	title: string;
+	year: string;
+	runtime: string;
+	genre: string;
+	director: string;
+	imdbID: string;
+	isDeleted: boolean;
+}
+
 type NotRequire<Type> = {
 	[Property in keyof Type]?: Type[Property];
 };

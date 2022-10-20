@@ -9,13 +9,7 @@ class MovieController {
 	async getMovies(req: Request, res: Response, next: NextFunction) {
 		try {
 			const { search } = req.body;
-
-			const query: IQueryValues = req.query;
-			const { limit, page } = queryHandler({
-				limit: query.limit,
-				page: query.page
-			});
-			const movies = await MovieService.getMovies(search, page, limit);
+			const movies = await MovieService.getMovies(search);
 
 			return res.status(200).send(movies);
 		} catch (err: any) {
@@ -26,8 +20,8 @@ class MovieController {
 
 	async getMovieById(req: Request, res: Response, next: NextFunction) {
 		try {
-			const { id } = req.params;
-			const movie = await MovieService.getMovieById(id);
+			const { imdbID } = req.params;
+			const movie = await MovieService.getMovieById(imdbID);
 			return res.status(200).send(movie);
 		} catch (err: any) {
 			logger.error(err);
@@ -37,8 +31,8 @@ class MovieController {
 
 	async createMovie(req: Request, res: Response, next: NextFunction) {
 		try {
-			const { body, user } = req;
-			const movie = await MovieService.createMovie(body, user);
+			const { body } = req;
+			const movie = await MovieService.createMovie(body);
 			return res.status(200).send(movie);
 		} catch (err: any) {
 			logger.error(err);
@@ -48,9 +42,9 @@ class MovieController {
 
 	async updateMovie(req: Request, res: Response, next: NextFunction) {
 		try {
-			const { id } = req.params;
-			const { body, user } = req;
-			const updatedMovie = await MovieService.updateMovie(id, body, user);
+			const { imdbID } = req.params;
+			const { body } = req;
+			const updatedMovie = await MovieService.updateMovie(imdbID, body);
 			return res.status(200).send(updatedMovie);
 		} catch (err: any) {
 			logger.error(err);
@@ -60,9 +54,8 @@ class MovieController {
 
 	async deleteMovie(req: Request, res: Response, next: NextFunction) {
 		try {
-			const { id } = req.params;
-			const { user } = req;
-			const updatedMovie = await MovieService.deleteMovie(id, user);
+			const { imdbID } = req.params;
+			const updatedMovie = await MovieService.deleteMovie(imdbID);
 			return res.status(200).send(updatedMovie);
 		} catch (err: any) {
 			logger.error(err);
@@ -78,12 +71,12 @@ class MovieController {
 				limit: query.limit,
 				page: query.page
 			});
-			const updatedMovie = await MovieService.getFavoriteMovie(
+			const favoritesMovie = await MovieService.getFavoriteMovie(
 				page,
 				limit,
 				user
 			);
-			return res.status(200).send(updatedMovie);
+			return res.status(200).send(favoritesMovie);
 		} catch (err: any) {
 			logger.error(err);
 			next(err);
@@ -92,9 +85,9 @@ class MovieController {
 
 	async fovoriteMovie(req: Request, res: Response, next: NextFunction) {
 		try {
-			const { id } = req.params;
+			const { imdbID } = req.params;
 			const { user } = req;
-			const updatedMovie = await MovieService.favoriteMovie(id, user);
+			const updatedMovie = await MovieService.favoriteMovie(imdbID, user);
 			return res.status(200).send(updatedMovie);
 		} catch (err: any) {
 			logger.error(err);

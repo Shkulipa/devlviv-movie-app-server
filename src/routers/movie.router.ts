@@ -10,7 +10,7 @@ import MovieController from './../controllers/movie.controller';
 const movieRouter = Router();
 
 movieRouter.post('/', validation(search), MovieController.getMovies);
-movieRouter.get('/:id', MovieController.getMovieById);
+movieRouter.get('/:imdbID', MovieController.getMovieById);
 
 movieRouter.post(
 	'/create',
@@ -19,14 +19,22 @@ movieRouter.post(
 );
 
 movieRouter.patch(
-	'/:id',
+	'/:imdbID',
 	[checkAuth(), validation(movieUpdate)],
 	MovieController.updateMovie
 );
 
-movieRouter.delete('/:id', [checkAuth()], MovieController.deleteMovie);
+movieRouter.delete('/:imdbID', [checkAuth()], MovieController.deleteMovie);
 
-movieRouter.get('/favorite', checkAuth(), MovieController.getFovoriteMovie);
-movieRouter.post('/favorite/:id', checkAuth(), MovieController.fovoriteMovie);
+movieRouter.get(
+	'/favorite/collection',
+	checkAuth(),
+	MovieController.getFovoriteMovie
+);
+movieRouter.post(
+	'/favorite/:imdbID',
+	checkAuth(),
+	MovieController.fovoriteMovie
+);
 
 export default movieRouter;
