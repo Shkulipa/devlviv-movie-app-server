@@ -1,11 +1,3 @@
-export interface IMovieInput {
-	title: string;
-	year: number;
-	runtime: number;
-	genre: string;
-	director: string;
-}
-
 export interface IMovie {
 	id: number;
 	title: string;
@@ -16,6 +8,20 @@ export interface IMovie {
 	imdbID: string;
 	isDeleted: boolean;
 }
+
+export interface IMovieFromOMB {
+	Title: string;
+	Year: string;
+	imdbID: string;
+	Type: string;
+	Poster: string;
+}
+
+export interface IMovieInput
+	extends Pick<IMovie, 'title' | 'year' | 'runtime' | 'genre' | 'director'> {}
+
+export interface IMovieResponse
+	extends Pick<IMovie, 'title' | 'year' | 'imdbID'> {}
 
 type NotRequire<Type> = {
 	[Property in keyof Type]?: Type[Property];

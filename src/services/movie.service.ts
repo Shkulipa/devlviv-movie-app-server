@@ -6,9 +6,11 @@ import { IUserDecode } from '../interfaces/user.interfaces';
 import MovieFavoritesModel from '../models/movieFavorites.model';
 import { $omdApi } from '../utils/axios';
 import logger from '../utils/logger';
+import { objKeysToLoweCase } from '../utils/objectKeysLowecase';
 import { uuidGenerater } from '../utils/uuidGenerater';
 import {
 	IMovie,
+	IMovieFromOMB,
 	IMovieInput,
 	IMovieInputUpdate
 } from './../interfaces/movie.interfaces';
@@ -39,7 +41,16 @@ class MovieService {
 			})) as unknown as IMovie[];
 			const onlyImdbIDFromDB: string[] = dbMovies.map(film => film.imdbID);
 
-			const movies: any = [];
+			const dbMoviesOwnDD = await MovieModel.findAll({
+				where: {
+					title: {
+						[Op.like]: `%${search}%`
+					},
+					isDeleted: false
+				}
+			});
+
+			const movies: (IMovie | IMovieFromOMB)[] = [];
 			onlyImdbIDFromDB.forEach((ImdbID, idx) => {
 				if (onlyImdbIDFromIMD.includes(ImdbID)) {
 					movies.push(dbMovies[idx]);
@@ -49,7 +60,9 @@ class MovieService {
 				if (!onlyImdbIDFromDB.includes(ImdbID)) movies.push(Search[idx]);
 			});
 
-			return movies;
+			const moviesConverKeys = movies.map(movie => objKeysToLoweCase(movie));
+			const moviesResponse = [...dbMoviesOwnDD, ...moviesConverKeys];
+			return moviesResponse;
 		} catch (err: any) {
 			logger.error(err);
 			throw new Error(err.message);
@@ -250,11 +263,36 @@ class MovieService {
 						[Op.and]: [{ userId: +user.id }, { imdbID: imdbID }]
 					}
 				});
-			else
+			else {
+				const dataMovie = {
+					title: '',
+					year: ''
+				};
+
+				const movie = await MovieModel.findOne({
+					where: { imdbID, isDeleted: false }
+				});
+				if (movie) {
+					dataMovie.title = movie.getDataValue('title');
+					dataMovie.year = movie.getDataValue('year');
+				}
+
+				if (!movie) {
+					const { data } = await $omdApi.get('/', {
+						params: {
+							i: imdbID
+						}
+					});
+					dataMovie.title = data.Title;
+					dataMovie.year = data.Year;
+				}
+
 				await MovieFavoritesModel.create({
 					userId: +user.id,
-					imdbID: imdbID
+					imdbID: imdbID,
+					...dataMovie
 				});
+			}
 		} catch (err: any) {
 			logger.error(err);
 			throw new Error(err.message);

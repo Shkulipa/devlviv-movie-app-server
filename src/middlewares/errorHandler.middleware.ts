@@ -36,5 +36,5 @@ export function errorHandler(
 		return res.status(400).json({ message: errMsg.trim() });
 	}
 
-	return res.status(500).json({ Error: err.message });
+	return res.status(500).json({ message: err.message });
 }

@@ -9,7 +9,9 @@ const MovieFavoritesModel = sequelize.define(
 	{
 		id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
 		userId: { type: DataTypes.INTEGER, allowNull: false },
-		imdbID: { type: DataTypes.STRING, allowNull: false }
+		imdbID: { type: DataTypes.STRING, allowNull: false },
+		title: { type: DataTypes.STRING, allowNull: false },
+		year: { type: DataTypes.STRING, allowNull: false }
 	},
 	{ timestamps: false }
 );
