@@ -1,6 +1,7 @@
 import { Router } from 'express';
 
 import checkAuth from '../middlewares/checkAuth.middleware';
+import indentificateUser from '../middlewares/indentificateUser.middleware';
 import validation from '../middlewares/validation.middleware';
 import movieAdd from '../schemas/movieAdd.schema';
 import movieUpdate from '../schemas/movieUpdate.schema';
@@ -10,7 +11,7 @@ import MovieController from './../controllers/movie.controller';
 const movieRouter = Router();
 
 movieRouter.post('/', validation(search), MovieController.getMovies);
-movieRouter.get('/:imdbID', MovieController.getMovieById);
+movieRouter.get('/:imdbID', indentificateUser(), MovieController.getMovieById);
 
 movieRouter.post(
 	'/create',

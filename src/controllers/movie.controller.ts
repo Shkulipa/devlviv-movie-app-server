@@ -10,7 +10,6 @@ class MovieController {
 		try {
 			const { search } = req.body;
 			const movies = await MovieService.getMovies(search);
-
 			return res.status(200).send(movies);
 		} catch (err: any) {
 			logger.error(err);
@@ -21,7 +20,8 @@ class MovieController {
 	async getMovieById(req: Request, res: Response, next: NextFunction) {
 		try {
 			const { imdbID } = req.params;
-			const movie = await MovieService.getMovieById(imdbID);
+			const { user } = req;
+			const movie = await MovieService.getMovieById(imdbID, user);
 			return res.status(200).send(movie);
 		} catch (err: any) {
 			logger.error(err);

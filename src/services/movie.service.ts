@@ -26,13 +26,16 @@ class MovieService {
 				}
 			});
 			const { Search } = data;
-			const getImdbIDs: IImdbID[] = Search.map((film: IMovieOMD) => ({
-				imdbID: film.imdbID,
-				isDeleted: false
-			}));
-			const onlyImdbIDFromIMD: string[] = Search.map(
-				(film: IMovieOMD) => film.imdbID
-			);
+
+			let getImdbIDs: IImdbID[] = [];
+			let onlyImdbIDFromIMD: string[] = [];
+			if (Search) {
+				getImdbIDs = Search.map((film: IMovieOMD) => ({
+					imdbID: film.imdbID,
+					isDeleted: false
+				}));
+				onlyImdbIDFromIMD = Search.map((film: IMovieOMD) => film.imdbID);
+			}
 
 			const dbMovies = (await MovieModel.findAll({
 				where: {
@@ -85,7 +88,7 @@ class MovieService {
 		}
 	}
 
-	async getMovieById(imdbID: string) {
+	async getMovieById(imdbID: string, user?: IUserDecode) {
 		try {
 			/**
 			 * @info
@@ -103,7 +106,22 @@ class MovieService {
 			const movie = await MovieModel.findOne({
 				where: { imdbID, isDeleted: false }
 			});
-			if (movie) return movie;
+			if (movie) {
+				if (user) {
+					const isMovieFavorite = await MovieModel.findOne({
+						where: { imdbID, isDeleted: false, userId: user.id }
+					});
+
+					if (isMovieFavorite) {
+						return {
+							...movie,
+							isFavorite: true
+						};
+					}
+				}
+
+				return movie;
+			}
 
 			/**
 			 * @info
@@ -114,7 +132,11 @@ class MovieService {
 					i: imdbID
 				}
 			});
-			if (data) return data;
+
+			if (data) {
+				const makeLowerCase = objKeysToLoweCase(data);
+				return makeLowerCase;
+			}
 
 			/**
 			 * @info
