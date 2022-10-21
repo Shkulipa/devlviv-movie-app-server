@@ -53,6 +53,7 @@
     "sequelize": "^6.25.2",
     "sequelize-cli": "^6.5.1",
     "short-unique-id": "^4.4.4",
+    "ts-node": "^10.9.1",
     "zod": "^3.19.1"
   }
 }
