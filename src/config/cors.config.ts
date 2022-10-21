@@ -5,6 +5,6 @@ import cors from 'cors';
  * don't use * for localhost
  */
 export default cors({
-	origin: ['http://localhost:3000'],
+	origin: ['*'],
 	credentials: true
 });
