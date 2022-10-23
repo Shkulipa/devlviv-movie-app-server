@@ -20,7 +20,7 @@ const indentificateUser =
 				);
 
 				if (expired)
-					throw ApiError.unauthorized('Sorry, yout token was expired');
+					throw ApiError.unauthorized('Sorry, your token was expired');
 
 				req.user = decoded;
 			}

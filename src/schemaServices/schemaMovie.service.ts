@@ -5,7 +5,7 @@ import { ISchemaInput } from './../interfaces/schema.interface';
 class SchemaMovieService {
 	private movieTitleMax = 100;
 	private movieYearmin = 1900;
-	private movieRuntimeMin = 1;
+	private movieRuntimeMax = 10;
 	private movieGenreMax = 50;
 	private movieDirectorMax = 50;
 
@@ -54,22 +54,19 @@ class SchemaMovieService {
 		const validate = number({
 			required_error: 'Year is required',
 			invalid_type_error: 'Year must be a number'
-		}).min(
-			this.movieYearmin,
-			`Year too long - maximum can be ${this.movieYearmin} chars`
-		);
+		});
 
 		if (options && options.optional) return validate.optional();
 		return validate;
 	}
 
 	movieRuntime(options?: ISchemaInput) {
-		const validate = number({
+		const validate = string({
 			required_error: 'Runtime is required',
-			invalid_type_error: 'Runtime must be a number'
-		}).min(
-			this.movieRuntimeMin,
-			`Runtime too small - minimum can be ${this.movieRuntimeMin} mins`
+			invalid_type_error: 'Runtime must be a string'
+		}).max(
+			this.movieRuntimeMax,
+			`Runtime too long - minimum can be ${this.movieRuntimeMax} chars`
 		);
 
 		if (options && options.optional) return validate.optional();

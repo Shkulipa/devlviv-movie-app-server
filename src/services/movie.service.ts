@@ -28,44 +28,58 @@ class MovieService {
 			const { Search } = data;
 
 			let getImdbIDs: IImdbID[] = [];
-			let onlyImdbIDFromIMD: string[] = [];
-			if (Search) {
-				getImdbIDs = Search.map((film: IMovieOMD) => ({
+			getImdbIDs =
+				Search?.map((film: IMovieOMD) => ({
 					imdbID: film.imdbID,
 					isDeleted: false
-				}));
-				onlyImdbIDFromIMD = Search.map((film: IMovieOMD) => film.imdbID);
-			}
+				})) || [];
+			const updatedOMDBMovies =
+				Search?.map((film: IMovieOMD) => ({
+					...film
+				})) || [];
 
-			const dbMovies = (await MovieModel.findAll({
-				where: {
-					[Op.or]: [...getImdbIDs]
-				}
-			})) as unknown as IMovie[];
-			const onlyImdbIDFromDB: string[] = dbMovies.map(film => film.imdbID);
-
-			const dbMoviesOwnDD = await MovieModel.findAll({
+			const getIdsArrayStr = getImdbIDs.map(movie => movie.imdbID);
+			const getSimilarMovies = (await MovieModel.findAll({
+				raw: true,
 				where: {
 					title: {
 						[Op.like]: `%${search}%`
 					},
-					isDeleted: false
+					isDeleted: false,
+					imdbID: {
+						[Op.not]: [...getIdsArrayStr]
+					}
 				}
-			});
+			})) as unknown as IMovie[];
 
-			const movies: (IMovie | IMovieFromOMB)[] = [];
-			onlyImdbIDFromDB.forEach((ImdbID, idx) => {
-				if (onlyImdbIDFromIMD.includes(ImdbID)) {
-					movies.push(dbMovies[idx]);
+			const dbMovies = (await MovieModel.findAll({
+				raw: true,
+				where: {
+					isDeleted: false,
+					[Op.or]: [...getImdbIDs]
 				}
-			});
-			onlyImdbIDFromIMD.forEach((ImdbID, idx) => {
-				if (!onlyImdbIDFromDB.includes(ImdbID)) movies.push(Search[idx]);
-			});
+			})) as unknown as IMovie[];
 
-			const moviesConverKeys = movies.map(movie => objKeysToLoweCase(movie));
-			const moviesResponse = [...dbMoviesOwnDD, ...moviesConverKeys];
-			return moviesResponse;
+			const onlyImdbIDFromDB: string[] = dbMovies.map(film => film.imdbID);
+
+			const replaceMoviesOMBonOwnDB = updatedOMDBMovies.map(
+				(film: IMovieOMD) => {
+					if (onlyImdbIDFromDB.includes(film.imdbID)) {
+						const findMovie = dbMovies.find(
+							movieFromDB => movieFromDB.imdbID === film.imdbID
+						);
+						return findMovie;
+					}
+					return film;
+				}
+			);
+
+			const filterMovies = replaceMoviesOMBonOwnDB
+				.filter((movie: IMovie) => !movie.isDeleted)
+				.map((movie: IMovie) => objKeysToLoweCase(movie));
+
+			const unitedMovies = [...filterMovies, ...getSimilarMovies];
+			return unitedMovies;
 		} catch (err: any) {
 			logger.error(err);
 			throw new Error(err.message);
@@ -75,13 +89,14 @@ class MovieService {
 	async getFavoriteMovie(page: number, limit: number, user: IUserDecode) {
 		try {
 			const offset = page * limit - limit;
-			return await MovieFavoritesModel.findAndCountAll({
+			const favoritesMovie = await MovieFavoritesModel.findAndCountAll({
 				where: {
 					userId: user.id
 				},
 				limit,
 				offset
 			});
+			return favoritesMovie;
 		} catch (err: any) {
 			logger.error(err);
 			throw new Error(err.message);
@@ -108,13 +123,14 @@ class MovieService {
 			});
 			if (movie) {
 				if (user) {
-					const isMovieFavorite = await MovieModel.findOne({
-						where: { imdbID, isDeleted: false, userId: user.id }
+					const isMovieFavorite = await MovieFavoritesModel.findOne({
+						raw: true, //allow get data without { dataValues: {...}, _previousData: {...}, ... }
+						where: { imdbID, userId: user.id }
 					});
 
 					if (isMovieFavorite) {
 						return {
-							...movie,
+							...isMovieFavorite,
 							isFavorite: true
 						};
 					}
@@ -157,21 +173,29 @@ class MovieService {
 				where: { imdbID, isDeleted: true }
 			});
 			if (movieIsDeleted) {
+				const bodyCreateMovie = {
+					...input,
+					imdbID,
+					isDeleted: false
+				};
 				await MovieModel.update(
 					{
-						...input,
-						imdbID,
-						isDeleted: false
+						...bodyCreateMovie
 					},
 					{ where: { imdbID } }
 				);
-				return;
+				return objKeysToLoweCase(bodyCreateMovie);
 			}
 
-			return await MovieModel.create({
-				...input,
-				imdbID
-			});
+			const createdMovie = (
+				await MovieModel.create({
+					...input,
+					imdbID
+				})
+			).get({ plain: true });
+
+			const createdMovieResponse = objKeysToLoweCase(createdMovie);
+			return createdMovieResponse;
 		} catch (err: any) {
 			logger.error(err);
 			throw new Error(err.message);
@@ -183,6 +207,7 @@ class MovieService {
 			const movie = await MovieModel.findOne({
 				where: { imdbID, isDeleted: false }
 			});
+
 			if (movie) {
 				await MovieModel.update(
 					{
@@ -245,6 +270,11 @@ class MovieService {
 					},
 					{ where: { imdbID } }
 				);
+				await MovieFavoritesModel.destroy({
+					where: {
+						imdbID
+					}
+				});
 				return;
 			}
 
@@ -270,8 +300,7 @@ class MovieService {
 
 	async favoriteMovie(imdbID: string, user: IUserDecode) {
 		try {
-			await this.getMovieById(imdbID);
-
+			const movie = await this.getMovieById(imdbID);
 			const isFavorite = await MovieFavoritesModel.findOne({
 				where: {
 					userId: +user.id,
@@ -279,24 +308,22 @@ class MovieService {
 				}
 			});
 
-			if (isFavorite)
+			if (isFavorite) {
 				await MovieFavoritesModel.destroy({
 					where: {
 						[Op.and]: [{ userId: +user.id }, { imdbID: imdbID }]
 					}
 				});
-			else {
+				return;
+			} else {
 				const dataMovie = {
 					title: '',
 					year: ''
 				};
 
-				const movie = await MovieModel.findOne({
-					where: { imdbID, isDeleted: false }
-				});
 				if (movie) {
-					dataMovie.title = movie.getDataValue('title');
-					dataMovie.year = movie.getDataValue('year');
+					dataMovie.title = movie.title;
+					dataMovie.year = movie.year;
 				}
 
 				if (!movie) {
