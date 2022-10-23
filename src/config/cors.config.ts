@@ -7,7 +7,10 @@ import cors from 'cors';
  * origin: ['http://localhost:3000'],
  */
 export default cors({
-	origin: ['http://localhost:3000'],
+	origin: [
+		'http://localhost:3000',
+		'https://flourishing-marzipan-8a261a.netlify.app/'
+	],
 	methods: ['PUT', 'DELETE', 'GET', 'POST', 'PATCH'],
 	credentials: true
 });
