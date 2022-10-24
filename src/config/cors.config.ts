@@ -7,7 +7,8 @@ import cors from 'cors';
  * origin: ['http://localhost:3000'],
  */
 export default cors({
-	origin: '*',
+	origin: ['http://localhost:3000'],
 	methods: ['PUT', 'DELETE', 'GET', 'POST', 'PATCH'],
-	credentials: true
+	credentials: true,
+	optionsSuccessStatus: 200
 });

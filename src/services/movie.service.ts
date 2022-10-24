@@ -4,13 +4,13 @@ import { IMovieOMD } from '../interfaces/film.interfaces';
 import { IImdbID } from '../interfaces/IImdbID.interfaces';
 import { IUserDecode } from '../interfaces/user.interfaces';
 import MovieFavoritesModel from '../models/movieFavorites.model';
+import DBService from '../services/db.service';
 import { $omdApi } from '../utils/axios';
 import logger from '../utils/logger';
 import { objKeysToLoweCase } from '../utils/objectKeysLowecase';
 import { uuidGenerater } from '../utils/uuidGenerater';
 import {
 	IMovie,
-	IMovieFromOMB,
 	IMovieInput,
 	IMovieInputUpdate
 } from './../interfaces/movie.interfaces';
@@ -121,6 +121,7 @@ class MovieService {
 			const movie = await MovieModel.findOne({
 				where: { imdbID, isDeleted: false }
 			});
+
 			if (movie) {
 				if (user) {
 					const isMovieFavorite = await MovieFavoritesModel.findOne({
@@ -300,8 +301,14 @@ class MovieService {
 
 	async favoriteMovie(imdbID: string, user: IUserDecode) {
 		try {
-			const movie = await this.getMovieById(imdbID);
+			const movie = (await MovieModel.findOne({
+				raw: true,
+				where: { imdbID }
+			})) as unknown as IMovie;
+			if (movie?.isDeleted) throw ApiError.badRequest("Movie wasn't found");
+
 			const isFavorite = await MovieFavoritesModel.findOne({
+				raw: true,
 				where: {
 					userId: +user.id,
 					imdbID: imdbID
@@ -318,14 +325,28 @@ class MovieService {
 			} else {
 				const dataMovie = {
 					title: '',
-					year: ''
+					year: '',
+					runtime: '',
+					director: '',
+					genre: ''
 				};
 
+				/**
+				 * @info
+				 * movie isn in own DB
+				 * create record only in Favorites movies model
+				 */
 				if (movie) {
 					dataMovie.title = movie.title;
 					dataMovie.year = movie.year;
 				}
 
+				/**
+				 * @info
+				 * movie isn't in own DB
+				 * create film in own DB, and
+				 * create record only in Favorites movies model
+				 */
 				if (!movie) {
 					const { data } = await $omdApi.get('/', {
 						params: {
@@ -334,13 +355,35 @@ class MovieService {
 					});
 					dataMovie.title = data.Title;
 					dataMovie.year = data.Year;
+					dataMovie.runtime = data.Runtime;
+					dataMovie.director = data.Director;
+					dataMovie.genre = data.Genre;
 				}
 
+				/**
+				 * @info
+				 * if one from 2 request will be broken
+				 * all records will be removed
+				 */
+				const transaction = await DBService.db.transaction();
 				await MovieFavoritesModel.create({
 					userId: +user.id,
 					imdbID: imdbID,
-					...dataMovie
+					title: dataMovie.title,
+					year: dataMovie.year
 				});
+
+				/**
+				 * @info
+				 * if movie isn't exsist in own DB
+				 * create record only in Favorites movies model
+				 */
+				if (!movie)
+					await MovieModel.create({
+						imdbID: imdbID,
+						...dataMovie
+					});
+				await transaction.commit();
 			}
 		} catch (err: any) {
 			logger.error(err);
